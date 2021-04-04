@@ -38,7 +38,7 @@ public class ApiDocCommand implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         Preconditions.checkState(specifications.length >= 2);
-        OpenAPI mainSpecification = read(specLocation(specifications[0]), false);
+        OpenAPI mainSpecification = read(filePath(specifications[0]), false);
 
         List<OpenAPI> specificationsToBeJoined = new ArrayList<>();
 
@@ -91,33 +91,32 @@ public class ApiDocCommand implements Callable<Integer> {
             prefix = null;
         }
 
-        OpenAPI particularSpecification = read(specLocation(specificationPath), false);
+        OpenAPI particularSpecification = read(filePath(specificationPath), false);
 
         if (prefix != null) {
             addPrefixToSchemaName(particularSpecification, prefix);
         }
 
         if (cutOffTags != null && cutOffTags.length > 0) {
-            cutOffTags(particularSpecification, cutOffTags);
+            cutOffOperationsWithTags(particularSpecification, cutOffTags);
         }
 
         return particularSpecification;
     }
 
-    private void addPrefixToSchemaName(OpenAPI specification, String namespace) {
+    private void addPrefixToSchemaName(OpenAPI specification, String prefix) {
         AddPrefixToSchemaNameProcessor processor = new AddPrefixToSchemaNameProcessor();
-        processor.process(specification, namespace);
+        processor.process(specification, prefix);
     }
 
-    private void cutOffTags(OpenAPI specification, String[] cutOffTags) {
+    private void cutOffOperationsWithTags(OpenAPI specification, String[] tags) {
         RemoveOperationWithTagsProcessor processor = new RemoveOperationWithTagsProcessor();
-        List<String> list = Arrays.asList(cutOffTags);
-        processor.process(specification, new HashSet<>(list));
+        processor.process(specification, new HashSet<>(Arrays.asList(tags)));
     }
 
-    private void merge(OpenAPI mainSpecification, List<OpenAPI> joinedSpecifications) {
+    private void merge(OpenAPI mainSpecification, List<OpenAPI> specificationsToBeJoined) {
         MergeSpecificationsProcessor processor = new MergeSpecificationsProcessor();
-        processor.process(mainSpecification, joinedSpecifications);
+        processor.process(mainSpecification, specificationsToBeJoined);
     }
 
     private OpenAPI read(String location, boolean resolve) {
@@ -126,7 +125,7 @@ public class ApiDocCommand implements Callable<Integer> {
         return new OpenAPIV3Parser().read(location, null, parseOptions);
     }
 
-    private String specLocation(String fileName) {
+    private String filePath(String fileName) {
         return new File(dir, fileName).getPath();
     }
 }
